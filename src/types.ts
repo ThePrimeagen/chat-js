@@ -1,5 +1,4 @@
 import WebSocket from "ws";
-
 export interface IRoom {
     name: string;
 

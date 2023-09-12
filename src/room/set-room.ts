@@ -1,30 +1,29 @@
 import WebSocket from "ws";
+import { IRoom } from "../types";
 
 export default class SetRoom {
     private users: Set<WebSocket>;
 
-    constructor() {
+    constructor(public name: string) {
         this.users = new Set();
     }
 
     add(user: WebSocket) {
-        if (!this.users.has(user)) {
-            this.users.add(user);
-        }
+        this.users.add(user);
     }
 
     remove(user: WebSocket) {
-        if (this.users.has(user)) {
-            this.users.delete(user);
-        }
+        this.users.delete(user);
     }
 
     push(from: WebSocket, message: string) {
-        for (const sockMeDaddy of this.users) {
-            sockMeDaddy.send(`${from} says ${message}`);
+        for (const sock of this.users) {
+            sock.send(`${from} says ${message}`);
         }
     }
 }
 
-
+export function createRoom(name: string): IRoom {
+    return new SetRoom(name);
+}
 

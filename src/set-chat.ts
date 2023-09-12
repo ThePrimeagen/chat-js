@@ -1,19 +1,14 @@
-import ArrayRoom from "./room/array-room";
 import WebSocket from "ws";
 import { IRoom } from "./types";
 
 export class Chat {
-    private users: WebSocket[];
-    private rooms: IRoom[];
+    private rooms: Map<string, IRoom>;
 
-    constructor() {
-        this.users = [];
-        this.rooms = [];
+    constructor(private createRoom: (name: string) => IRoom) {
+        this.rooms = new Map();
     }
 
     add(user: WebSocket) {
-        this.users.push(user);
-
         user.on("message", (msg) => {
             const message = typeof msg === "object" ? msg.toString() : msg;
             const [command, ...rest] = message.split(" ");
@@ -24,8 +19,6 @@ export class Chat {
             } else if (command === "leave") {
                 this.leave(user, rest[0]);
             }
-
-            console.log("message received", command, rest);
         });
 
         user.on("error", (error: Error) => {
@@ -33,7 +26,6 @@ export class Chat {
         });
 
         user.on("close", () => {
-            this.users.splice(this.users.indexOf(user), 1);
             this.rooms.forEach((room) => {
                 room.remove(user);
             });
@@ -44,8 +36,8 @@ export class Chat {
         let room = this.findRoom(roomName);
 
         if (!room) {
-            room = new ArrayRoom(roomName);
-            this.rooms.push(room);
+            room = this.createRoom(roomName);
+            this.rooms.set(roomName, room);
         }
 
         room.add(user);
@@ -77,7 +69,8 @@ export class Chat {
     }
 
     private findRoom(roomName: string): IRoom | undefined {
-        return this.rooms.find(room => room.name === roomName);
+        return this.rooms.get(roomName);
     }
 }
+
 
