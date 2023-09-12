@@ -26,7 +26,7 @@ const args = [{
     name: "logPath",
     alias: "l",
     type: String,
-    defaultValue: "/tmp/chat.log",
+    defaultValue: undefined,
 }];
 
 export function initConfig(): Config {

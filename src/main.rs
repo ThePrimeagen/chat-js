@@ -15,19 +15,19 @@ struct Config {
     #[clap(short = 'q', long, default_value_t = 1)]
     parallel: usize,
 
-    #[clap(short, long, default_value_t = 1)]
+    #[clap(short, long, default_value_t = 100)]
     count: usize,
 
-    #[clap(short, long, default_value_t = 1)]
+    #[clap(short, long, default_value_t = 10)]
     rooms_to_join: usize,
 
-    #[clap(short = 'x', long, default_value_t = 1)]
+    #[clap(short = 'x', long, default_value_t = 20)]
     room_count: usize,
 
     #[clap(short, long, default_value_t = 10)]
     time_between_messages: u64,
 
-    #[clap(short, long, default_value_t = 1)]
+    #[clap(short, long, default_value_t = 100)]
     messages_to_send: usize,
 }
 
@@ -61,11 +61,13 @@ async fn run_client(
         write.send(tokio_tungstenite::tungstenite::Message::Text(msg)).await?;
     }
 
-    for _ in 0..config.messages_to_send {
+    for i in 0..config.messages_to_send {
         let duration = tokio::time::Duration::from_millis(config.time_between_messages);
         tokio::time::sleep(duration).await;
 
-        let msg = format!("hello from idx: {}", idx);
+        let idx = (idx + i) % rooms.len();
+
+        let msg = format!("MSG {} hello from idx: {}", idx);
         write.send(tokio_tungstenite::tungstenite::Message::Text(msg)).await?;
     }
 
@@ -78,6 +80,7 @@ async fn run_client(
 #[tokio::main]
 async fn main() -> Result<()> {
     let config: &'static Config = Box::leak(Box::new(Config::parse()));
+    println!("config: {:?}", config);
     let semaphore = Arc::new(tokio::sync::Semaphore::new(config.parallel));
     let url: &'static url::Url = Box::leak(Box::new(url::Url::parse(&format!(
         "ws://{}:{}",
@@ -109,6 +112,7 @@ async fn main() -> Result<()> {
     }
 
     futures_util::future::join_all(handles).await;
+    println!("messages received: {}", message_count.load(std::sync::atomic::Ordering::Relaxed));
 
     return Ok(());
 }
