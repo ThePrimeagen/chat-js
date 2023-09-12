@@ -13,3 +13,7 @@ wss.on("connection", (ws) => {
     chat.add(ws);
 });
 
+wss.on("listening", () => {
+    console.log("WE ARE A GO HOUSTONE");
+});
+

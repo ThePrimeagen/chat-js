@@ -1,5 +1,6 @@
 import WebSocket from "ws";
 import { IRoom } from "./types";
+import { getLogger } from "./logger";
 
 export class Chat {
     private rooms: Map<string, IRoom>;
@@ -12,6 +13,8 @@ export class Chat {
         user.on("message", (msg) => {
             const message = typeof msg === "object" ? msg.toString() : msg;
             const [command, ...rest] = message.split(" ");
+
+            getLogger().debug(`received command ${command} with args ${rest}`);
             if (command === "join") {
                 this.join(user, rest[0]);
             } else if (command === "msg") {
@@ -23,6 +26,13 @@ export class Chat {
 
         user.on("error", (error: Error) => {
             console.error(error);
+            this.rooms.forEach((room) => {
+                room.remove(user);
+            });
+
+            try {
+                user.close(0);
+            } catch (e) { }
         });
 
         user.on("close", () => {

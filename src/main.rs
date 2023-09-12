@@ -1,5 +1,5 @@
 use anyhow::Result;
-use futures_util::{StreamExt, SinkExt};
+use futures_util::{StreamExt, SinkExt, join};
 use std::sync::{Arc, atomic::AtomicUsize};
 
 use clap::Parser;
@@ -9,7 +9,7 @@ struct Config {
     #[clap(short, long, default_value = "42069")]
     port: usize,
 
-    #[clap(short, long, default_value = "0.0.0.0")]
+    #[clap(long, default_value = "0.0.0.0")]
     host: String,
 
     #[clap(short = 'q', long, default_value_t = 1)]
@@ -89,11 +89,12 @@ async fn main() -> Result<()> {
     let rooms: &'static Vec<String> = Box::leak(Box::new(rooms));
     let message_count = Arc::new(AtomicUsize::new(0));
 
+    let mut handles = vec![];
     for i in 0..config.count {
         let permit = semaphore.clone().acquire_owned();
         let message_count = message_count.clone();
 
-        tokio::spawn(async move {
+        handles.push(tokio::spawn(async move {
             match run_client(url, rooms, i, config).await {
                 Ok(count) => {
                     message_count.fetch_add(count, std::sync::atomic::Ordering::Relaxed);
@@ -104,8 +105,10 @@ async fn main() -> Result<()> {
             };
 
             drop(permit);
-        });
+        }));
     }
+
+    futures_util::future::join_all(handles).await;
 
     return Ok(());
 }
